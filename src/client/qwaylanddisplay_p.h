@@ -227,7 +227,7 @@ private:
     QPointer<QWaylandWindow> mLastInputWindow;
     QPointer<QWaylandWindow> mLastKeyboardFocus;
     QVector<QWaylandWindow *> mActiveWindows;
-    QVector<QWaylandWindow *> mAllWindows;
+    QVector<::wl_surface *> mAllSurfaces;
     struct wl_callback *mSyncCallback = nullptr;
     static const wl_callback_listener syncCallbackListener;
 

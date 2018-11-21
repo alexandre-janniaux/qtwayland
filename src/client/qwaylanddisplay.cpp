@@ -84,7 +84,7 @@ Q_LOGGING_CATEGORY(lcQpaWayland, "qt.qpa.wayland"); // for general (uncategorize
 struct wl_surface *QWaylandDisplay::createSurface(void *handle)
 {
     struct wl_surface *surface = mCompositor.create_surface();
-    mAllWindows.push_back(surface);
+    mAllSurfaces.push_back(surface);
     wl_surface_set_user_data(surface, handle);
     return surface;
 }
@@ -443,12 +443,12 @@ void QWaylandDisplay::handleWindowDestroyed(QWaylandWindow *window)
         handleWindowDeactivated(window);
 
     ::wl_surface *surface = static_cast<::wl_surface *>(window);
-    int index = mAllWindows.indexOf(surface);
+    int index = mAllSurfaces.indexOf(surface);
 
     if (index != -1) {
         // swap-erase
-        mAllWindows.replace(index, mAllWindows.back());
-        mAllWindows.pop_back();
+        mAllSurfaces.replace(index, mAllSurfaces.back());
+        mAllSurfaces.pop_back();
     }
 }
 
@@ -510,7 +510,7 @@ void QWaylandDisplay::setCursor(const QSharedPointer<QWaylandBuffer> &buffer, co
 
 bool QWaylandDisplay::ownSurface(struct wl_surface *surface)
 {
-    return mAllWindows.indexOf(surface) != -1;
+    return mAllSurfaces.indexOf(surface) != -1;
 }
 
 }
