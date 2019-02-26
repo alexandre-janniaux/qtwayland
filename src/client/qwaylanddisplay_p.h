@@ -181,6 +181,8 @@ public:
     void handleKeyboardFocusChanged(QWaylandInputDevice *inputDevice);
     void handleWindowDestroyed(QWaylandWindow *window);
 
+    bool ownSurface(struct wl_surface *surface);
+
 public slots:
     void blockingReadEvents();
     void flushRequests();
@@ -225,6 +227,7 @@ private:
     QPointer<QWaylandWindow> mLastInputWindow;
     QPointer<QWaylandWindow> mLastKeyboardFocus;
     QVector<QWaylandWindow *> mActiveWindows;
+    QVector<::wl_surface *> mAllSurfaces;
     struct wl_callback *mSyncCallback = nullptr;
     static const wl_callback_listener syncCallbackListener;
 

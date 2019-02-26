@@ -443,6 +443,13 @@ void QWaylandInputDevice::Pointer::pointer_enter(uint32_t serial, struct wl_surf
     if (!surface)
         return;
 
+    // If we don't own the surface, we just lost focus to a foreign surface
+    if (!mDisplay->ownSurface(surface)) {
+        // TODO: should we store the fact that we met a foreign surface?
+        mFocus = nullptr;
+        return;
+    }
+
     QWaylandWindow *window = QWaylandWindow::fromWlSurface(surface);
 #if QT_CONFIG(cursor)
     window->window()->setCursor(window->window()->cursor());
@@ -469,6 +476,11 @@ void QWaylandInputDevice::Pointer::pointer_leave(uint32_t time, struct wl_surfac
     if (!surface)
         return;
 
+    // In case we have to share the wayland display with an external user of
+    // wayland API, we might find a surface that doesn't belong to us.
+    if (!mDisplay->ownSurface(surface))
+        return;
+
     if (!QWaylandWindow::mouseGrab()) {
         QWaylandWindow *window = QWaylandWindow::fromWlSurface(surface);
         window->handleMouseLeave(mParent);
@@ -493,8 +505,10 @@ void QWaylandInputDevice::Pointer::pointer_motion(uint32_t time, wl_fixed_t surf
     QWaylandWindow *window = mFocus;
 
     if (!window) {
-        // We destroyed the pointer focus surface, but the server
-        // didn't get the message yet.
+        // Either:
+        // + we destroyed the pointer focus surface, but the server
+        //   didn't get the message yet.
+        // + the surface on which the movement happens doesn't belong to us.
         return;
     }
 
@@ -559,6 +573,7 @@ void QWaylandInputDevice::Pointer::pointer_button(uint32_t serial, uint32_t time
     if (state)
         mParent->mQDisplay->setLastInputDevice(mParent, serial, window);
 
+    // TODO: what to do when the focus is lost to a foreign window?
     QWaylandWindow *grab = QWaylandWindow::mouseGrab();
     if (grab && grab != mFocus) {
         QPointF pos = QPointF(-1, -1);
@@ -595,8 +610,10 @@ void QWaylandInputDevice::Pointer::pointer_axis(uint32_t time, uint32_t axis, in
     QPoint angleDelta;
 
     if (!window) {
-        // We destroyed the pointer focus surface, but the server
-        // didn't get the message yet.
+        // Either:
+        // + we destroyed the pointer focus surface, but the server
+        //   didn't get the message yet.
+        // + the surface on which the movement happens doesn't belong to us.
         return;
     }
 
@@ -657,6 +674,11 @@ void QWaylandInputDevice::Keyboard::keyboard_enter(uint32_t time, struct wl_surf
     if (!surface)
         return;
 
+    // If we don't own the surface, we don't handle the message.
+    if (!mDisplay->ownSurface(surface)) {
+        mFocus = nullptr;
+        return;
+    }
 
     QWaylandWindow *window = QWaylandWindow::fromWlSurface(surface);
     mFocus = window;
@@ -669,7 +691,8 @@ void QWaylandInputDevice::Keyboard::keyboard_leave(uint32_t time, struct wl_surf
     Q_UNUSED(time);
     Q_UNUSED(surface);
 
-    if (surface) {
+    if (surface && !mDisplay->ownSurface(surface))
+    {
         QWaylandWindow *window = QWaylandWindow::fromWlSurface(surface);
         window->unfocus();
     }
@@ -831,6 +854,9 @@ void QWaylandInputDevice::Touch::touch_down(uint32_t serial,
                                      wl_fixed_t y)
 {
     if (!surface)
+        return;
+
+    if (!mDisplay->ownSurface(surface))
         return;
 
     mParent->mTime = time;
