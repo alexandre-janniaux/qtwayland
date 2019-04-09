@@ -206,9 +206,17 @@ void QWaylandWindow::initWindow()
     mFlags = window()->flags();
 }
 
+const wl_surface_listener surface_cbs =
+{
+    QWaylandWindow::surface_enter,
+    QWaylandWindow::surface_leave
+};
+
 void QWaylandWindow::initializeWlSurface()
 {
-    init(mDisplay->createSurface(static_cast<QtWayland::wl_surface *>(this)));
+    wl_surface *surface = mDisplay->createSurface(static_cast<QtWayland::wl_surface *>(this))
+    init(surface);
+    wl_surface_add_listener(surface, &surface_cbs, this);
 }
 
 bool QWaylandWindow::shouldCreateShellSurface() const
@@ -258,6 +266,8 @@ void QWaylandWindow::reset(bool sendDestroyEvent)
 
 QWaylandWindow *QWaylandWindow::fromWlSurface(::wl_surface *surface)
 {
+    if (wl_surface_get_listener(surface) != &surface_cbs)
+        return NULL;
     return static_cast<QWaylandWindow *>(static_cast<QtWayland::wl_surface *>(wl_surface_get_user_data(surface)));
 }
 
